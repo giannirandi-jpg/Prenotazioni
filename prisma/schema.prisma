@@ -1,0 +1,89 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id            Int       @id @default(autoincrement())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  isAdmin       Boolean   @default(false)
+  reservations  Reservation[]
+  accounts      Account[]
+  sessions      Session[]
+}
+
+model Account {
+  id                 Int    @id @default(autoincrement())
+  userId             Int
+  type               String
+  provider           String
+  providerAccountId  String
+  refresh_token      String?
+  access_token       String?
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String?
+  session_state      String?
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           Int      @id @default(autoincrement())
+  sessionToken String   @unique
+  userId       Int
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Gym {
+  id        Int       @id @default(autoincrement())
+  name      String    @unique
+  capacity  Int       @default(10)
+  schedules Schedule[]
+}
+
+model Schedule {
+  id          Int      @id @default(autoincrement())
+  gymId       Int
+  date        DateTime
+  startTime   DateTime
+  endTime     DateTime
+  name        String?
+  active      Boolean  @default(true)
+  reservations Reservation[]
+
+  gym Gym @relation(fields: [gymId], references: [id])
+}
+
+model Reservation {
+  id           Int      @id @default(autoincrement())
+  userId       Int
+  scheduleId   Int
+  status       String   @default("CONFIRMED") // CONFIRMED | WAITLIST | CANCELLED
+  createdAt    DateTime @default(now())
+  waitPosition Int?
+
+  user     User     @relation(fields: [userId], references: [id])
+  schedule Schedule @relation(fields: [scheduleId], references: [id])
+
+  @@unique([userId, scheduleId])
+  @@index([scheduleId, status])
+}
